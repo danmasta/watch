@@ -1,5 +1,5 @@
 # Watch
-File watching and process reload supervisor utility library
+Simple file watching and process reload supervisor utility
 
 #### Features:
 * Easy to use
