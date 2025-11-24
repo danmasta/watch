@@ -1,18 +1,18 @@
-import { Watcher, watcher, watch } from './lib/watcher.js';
+import { watch, Watcher, watcher } from './lib/watcher.js';
 import { Watchmon, watchmon } from './lib/watchmon.js';
 
 export {
+    watch,
     Watcher,
     watcher,
-    watch,
     Watchmon,
     watchmon
 };
 
 export default {
+    watch,
     Watcher,
     watcher,
-    watch,
     Watchmon,
     watchmon
 };
