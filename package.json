@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "author": "Daniel Smith <d@danmasta.net>",
-  "description": "File watching and process reload supervisor utility library",
+  "description": "Simple file watching and process reload supervisor utility",
   "license": "Apache-2.0",
   "keywords": [
     "watch",
