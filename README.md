@@ -78,7 +78,7 @@ Name | Type | Description
 `type` | *`string`* | Exec type to use for [spawning processes](https://nodejs.org/docs/latest-v24.x/api/child_process.html#asynchronous-process-creation). Options are: `fork`, `spawn`, and `exec`. Default is `fork`
 `cmd` | *`string`* | Entrypoint to use for spawned process. Default is `index`
 `args` | *`string[]`* | Arguments to pass to spawned process. Default is `undefined`
-`src` | *`string\|string[]`* | Source paths to watch, supports globs. Default is `**/**`
+`src` | *`string\|string[]`* | Source paths to watch, supports globs. Default is `**`
 `ignore` | *`string\|string[]`* | Source paths to ignore, supports globs. Default is `(.git\|node_modules)/**`
 `exts` | *`string\|string[]`* | Extensions to include for watching. Default is `undefined`
 `cwd` | *`string`* | Working directory for spawned process. Also used to resolve relative paths for watching. Default is `process.cwd`
@@ -115,7 +115,7 @@ import { Watcher, watcher, watch } from 'watch';
 ```
 Watch current working directory for changes on any file type
 ```js
-watch('**/**', paths => {
+watch('**', paths => {
     console.log('Files changed:', paths);
 });
 ```
@@ -127,7 +127,7 @@ watch('src', { exts: ['js', 'ts'] }, paths => {
 ```
 Watch root directory for changes on `js` file types and ignore `tests` directory using globs
 ```js
-watch('**/**.js', { ignore: 'tests/**' }, paths => {
+watch('**.js', { ignore: 'tests/**' }, paths => {
     console.log('Files changed:', paths);
 });
 ```
@@ -149,7 +149,7 @@ Run `index.js` using `fork`, watch for chages on `js` files in current directory
 ```js
 const server = watchmon({
     cmd: 'index',
-    src: '**/**',
+    src: '**',
     exts: ['js']
 });
 ```
@@ -161,7 +161,7 @@ const server = watchmon({
     type: 'spawn',
     cmd: 'node',
     args: ['app'],
-    src: '**/**',
+    src: '**',
     exts: ['js', 'ts'],
     stdout: out,
     stderr: out,
@@ -174,7 +174,7 @@ import { task, parallel } from 'gulp';
 
 const server = watchmon({
     cmd: 'app',
-    src: '**/**',
+    src: '**',
     exts: ['js'],
     start: false
 });
