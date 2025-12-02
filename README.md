@@ -24,7 +24,7 @@ npm install watch@danmasta/watch#v0.0.0 --save
 ```
 *See documentation regarding git dependencies [here](https://danmasta.github.io/lo/installation)*
 
-Import functions in your app
+Import functions
 ```js
 import { watch, watchmon } from 'watch';
 ```
