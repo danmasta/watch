@@ -14,13 +14,13 @@ Simple file watching and process reload supervisor utility
 Utility library for watching files and reloading processes on change. These utilites are modern, lighter-weight alternatives to packages like `chokidar` and `nodemon`. You can use them in your tools, build pipelines, or anywhere else you want to watch files and/or reload processes on change.
 
 ## Usage
-Add watch as a dependency and install via npm
-```bash
+Add `watch` as a dependency and install via npm
+```sh
 npm install watch@danmasta/watch --save
 ```
 Install a specific [version](https://github.com/danmasta/watch/tags)
-```bash
-npm install watch@danmasta/watch#v0.0.0 --save
+```sh
+npm install watch@danmasta/watch#semver:^v0.0.0 --save
 ```
 *See documentation regarding git dependencies [here](https://danmasta.github.io/lo/installation)*
 
