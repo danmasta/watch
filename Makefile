@@ -1,4 +1,4 @@
-.PHONY: test coverage version major minor patch status
+.PHONY: test coverage version major minor patch status format check
 
 SEMVER = patch
 
@@ -25,3 +25,9 @@ status:
 		echo "Git tree not clean"; \
 		exit 1; \
 	fi
+
+format:
+	node_modules/.bin/eslint --fix --fix-type layout .
+
+check:
+	node_modules/.bin/eslint --quiet .
