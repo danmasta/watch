@@ -148,4 +148,53 @@ describe('Watcher', () => {
         expect(paths).to.deep.equal(['src/a.js']);
     });
 
+    it('should ignore node_modules and .git in addition to ignore patterns', async () => {
+        mkdirSync(join(dir, 'node_modules'));
+        mkdirSync(join(dir, '.git'));
+        writeFileSync(join(dir, 'node_modules/x.js'), '');
+        writeFileSync(join(dir, '.git/HEAD'), '');
+        watcher = watch('**', { cwd: dir, ignore: 'tests/**', debounce: DEBOUNCE });
+        await ready();
+        writeFileSync(join(dir, 'node_modules/x.js'), 'x');
+        writeFileSync(join(dir, '.git/HEAD'), 'x');
+        writeFileSync(join(dir, 'tests/d.js'), 'x');
+        let res = await change(watcher);
+        expect(res).to.equal(undefined);
+        writeFileSync(join(dir, 'src/a.js'), 'x');
+        let [paths] = await change(watcher);
+        expect(paths).to.deep.equal(['src/a.js']);
+    });
+
+    it('should watch node_modules when defaultIgnore is false', async () => {
+        mkdirSync(join(dir, 'node_modules'));
+        writeFileSync(join(dir, 'node_modules/x.js'), '');
+        watcher = watch('**', { cwd: dir, defaultIgnore: false, debounce: DEBOUNCE });
+        await ready();
+        writeFileSync(join(dir, 'node_modules/x.js'), 'x');
+        let [paths] = await change(watcher);
+        expect(paths).to.deep.equal(['node_modules/x.js']);
+    });
+
+    it('should prune excluded directories from the walk', async function () {
+        // Note: Only the js recursive watcher on linux consults the matcher while walking
+        if (process.platform !== 'linux') {
+            this.skip();
+        }
+        let seen = [];
+        mkdirSync(join(dir, 'node_modules/pkg'), { recursive: true });
+        writeFileSync(join(dir, 'node_modules/pkg/index.js'), '');
+        watcher = watch('**', {
+            cwd: dir,
+            exclude: path => {
+                seen.push(path);
+                return path.startsWith('node_modules');
+            },
+            debounce: DEBOUNCE
+        });
+        await ready();
+        expect(seen).to.include('node_modules');
+        expect(seen).to.not.include('node_modules/pkg');
+        expect(seen).to.not.include('node_modules/pkg/index.js');
+    });
+
 });

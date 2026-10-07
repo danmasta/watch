@@ -126,6 +126,13 @@ describe('Watchmon', () => {
         expect(JSON.parse(sink.data)).to.include('--no-warnings');
     });
 
+    it('should pass defaultIgnore to the watcher', async () => {
+        create({ watch: true, defaultIgnore: false });
+        await once(mon, 'spawn');
+        expect(mon.watcher.opts.defaultIgnore).to.equal(false);
+        await mon.close();
+    });
+
     it('should close when watch is disabled', async () => {
         create();
         await once(mon, 'spawn');
