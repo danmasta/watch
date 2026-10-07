@@ -1,7 +1,7 @@
 {
   "name": "@danmasta/watch",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "author": "Daniel Smith <d@danmasta.net>",
   "description": "Simple file watching and process reload supervisor utility",
   "license": "Apache-2.0",
