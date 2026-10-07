@@ -31,7 +31,7 @@ import { watch, watchmon } from 'watch';
 
 ## Documentation
 ### Watcher
-`Watcher` is the base file watching class. It supports many options including glob matching, file extension filtering, and debouncing.
+`Watcher` is the base file watching class. It supports many options including glob matching, file extension filtering, and debouncing. Paths can be directories, files, or globs. Plain directories are watched recursively, and paths passed to callbacks and events are relative to `cwd`
 
 Signature:
 ```js
@@ -41,7 +41,7 @@ watch(paths?, opts?, fn?);
 #### Options
 Name | Type | Description
 -----|----- | -----------
-`src` | *`string\|string[]`* | Source paths to watch, supports globs. Default is `process.cwd`
+`src` | *`string\|string[]`* | Source paths to watch, supports globs. Plain directories are expanded to `dir/**` when matching. Default is `process.cwd`
 `ignore` | *`string\|string[]`* | Source paths to ignore, supports globs. Default is `undefined`
 `exts` | *`string\|string[]`* | Extensions to include for watching. Default is `undefined`
 `include` | *`function`* | Custom matcher function used to verify watched files. Default is `undefined`
@@ -53,7 +53,7 @@ Name | Type | Description
 `regex` | *`boolean`* | Support regular expression rules for `+`, and stars `*` that follow parenthesis or brackets when matching. Default is `false`
 `recursive` | *`boolean`* | Enable recursive watching for directories. Default is `true`
 `persistent` | *`boolean`* | Keep process open while watcher is active. Default is `true`
-`debounce` | *`number`* | Time in milliseconds to debounce events. If debounce is disabled, change events will be triggered for each underlying fs event and the paths callback argument will be a single path `string`. If enabled, the paths argument will be an `array` of changed paths during the time period. Default is `256`
+`debounce` | *`number`* | Time in milliseconds to debounce events. If debounce is disabled, change events will be triggered for each underlying fs event and the paths callback argument will be a single path `string`. If enabled, the paths argument will be an `array` of changed paths during the time period. Paths are relative to `cwd`. Default is `256`
 
 #### Methods
 Name | Description
@@ -63,6 +63,12 @@ Name | Description
 `isExt(str)` | Check if a path's extension is explicitly included in watching. Returns `boolean`
 `isWatched(str)` | Check if a path is included in watching. Verifies against `isIncluded`, `isExcluded`, and `isExt`. Returns `boolean`
 `close()` | Abort internal watchers and stop watching
+
+#### Events
+Name | Arguments | Description
+-----|-----------|------------
+`change` | `paths, event` | Emitted when a watched path changes. `paths` is a `string` or `array` depending on `debounce`, `event` is the underlying fs event name
+`error` | `err, base` | Emitted when an underlying watcher fails. `base` is the absolute path being watched
 
 ### Watchmon
 `Watchmon` is a process supervisor that can watch files for changes and trigger a reload. It's highly customizable and supports multiple exec types, piping to stdin, piping from stdout and stderr, deferred start, shutdown signals, and manual start, stop, and restart. It uses the [`Watcher`](#watcher) class under the hood for file watching.
@@ -86,12 +92,13 @@ Name | Type | Description
 `gid` | *`number`* | Group id for spawned process. Default is `undefined`
 `env` | *`object`* | Environment variables to pass to spawned process. Default is `process.env`
 `shell` | *`string\|boolean`* | Which shell to use for spawned process. Used with `spawn` or `exec`. Default is `undefined`
-`signal` | *`string`* | Default signal to use when stopping processes during restart or kill. Default is `SIGTERM`
-`stdin` | *`stream`* | Readable stream to pipe to spawned process `stdin`. Default is `undefined`
-`stdout` | *`stream`* | Writable stream to pipe spawned process `stdout` to. Default is `process.stdout`
-`stderr` | *`stream`* | Writable stream to pipe spawned process `stderr` to. Default is `process.stderr`
+`killSignal` | *`string`* | Signal to send when stopping the process during restart or kill. Default is `SIGTERM`
+`signals` | *`string\|string[]\|false`* | Process signals that trigger shutdown. The received signal is forwarded to the child process. Set to `false` to handle shutdown yourself. Default is `['SIGINT', 'SIGTERM']`
+`stdin` | *`stream`* | Readable stream to pipe to spawned process `stdin`. Not used with `exec`. Default is `undefined`
+`stdout` | *`stream`* | Writable stream to pipe spawned process `stdout` to. With `exec` the output is written when the process closes. Default is `process.stdout`
+`stderr` | *`stream`* | Writable stream to pipe spawned process `stderr` to. With `exec` the output is written when the process closes. Default is `process.stderr`
 `execPath` | *`string`* | Executable to use for spawning the process. Used with `fork`. Default is `undefined`
-`execArgs` | *`string[]`* | Arguments to pass to executable. Used with `fork`. Default is `undefined`
+`execArgv` | *`string[]`* | Arguments to pass to executable. Used with `fork`. Default is `undefined`
 `debounce` | *`number`* | Time in milliseconds to debounce events for triggering restart. Default is `256`
 `watch` | *`boolean`* | Enable file watching. Default is `true`
 `start` | *`boolean`* | Enable auto start process on creation. Default is `true`
@@ -104,8 +111,18 @@ Name | Description
 `start()` | Spawn process and return promise that resolves when the supervisor has exited. Returns `promise<undefined>`
 `restart()` | Kill existing process then re-spawn. Returns `promise<undefined>`
 `close()` | Kill existing process, abort watchers, and close supervisor. Emits a `done` event when shutdown complete. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
-`kill({ signal, exit })` | Kill existing process. Optionally abort watchers, and close supervisor. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
+`kill({ signal, exit })` | Kill existing process with `signal`, defaults to `killSignal`. Optionally abort watchers, remove signal handlers, and close supervisor. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
 `trigger(paths, event)` | Trigger a change event and restart. Returns `undefined`
+
+#### Events
+Name | Arguments | Description
+-----|-----------|------------
+`spawn` | `proc` | Emitted when the process has spawned
+`exit` | `proc, code, signal` | Emitted when the process exits, stdio may still be open
+`close` | `proc, code, signal` | Emitted when the process has fully exited and stdio is closed
+`error` | `err, proc, code, signal` | Emitted when the process exits on its own with a non-zero code or signal, or when spawning fails. Exits caused by `restart`, `kill`, or `close` are expected and do not emit
+`change` | `paths, event` | Emitted when a watched path changes, before restarting
+`done` | | Emitted when the supervisor has shut down
 
 ## Examples
 ### Watcher
@@ -166,6 +183,18 @@ const server = watchmon({
     stdout: out,
     stderr: out,
     shell: '/bin/bash'
+});
+```
+Disable the built in signal handlers and shut down manually
+```js
+const server = watchmon({
+    cmd: 'app',
+    signals: false
+});
+
+process.once('SIGINT', async () => {
+    await cleanup();
+    await server.close();
 });
 ```
 Use with `gulp` to create an auto-reloading dev server. Defer start, return `promise` to signal `done` in server task, listen to `done` event for other tasks. Pipe output to `stdout`
