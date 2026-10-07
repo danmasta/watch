@@ -42,10 +42,11 @@ watch(paths?, opts?, fn?);
 Name | Type | Description
 -----|----- | -----------
 `src` | *`string\|string[]`* | Source paths to watch, supports globs. Plain directories are expanded to `dir/**` when matching. Default is `process.cwd`
-`ignore` | *`string\|string[]`* | Source paths to ignore, supports globs. Default is `undefined`
+`ignore` | *`string\|string[]`* | Source paths to ignore, supports globs. Extends the default ignore list. On linux, ignored directories are also skipped during the recursive walk, so large trees like `node_modules` don't open a watcher per file. Default is `undefined`
+`defaultIgnore` | *`boolean`* | Ignore `**/.git/**` and `**/node_modules/**` in addition to `ignore` patterns. Set to `false` to disable. Default is `true`
 `exts` | *`string\|string[]`* | Extensions to include for watching. Default is `undefined`
 `include` | *`function`* | Custom matcher function used to verify watched files. Default is `undefined`
-`exclude` | *`function`* | Custom matcher function used to verify ignored files. Default is `undefined`
+`exclude` | *`function`* | Custom matcher function used to verify ignored files. Replaces `ignore` and the default ignore list. Also called with directory paths while walking on linux. Default is `undefined`
 `cwd` | *`string`* | Base path to resolve relative paths from. Default is `process.cwd`
 `bash` | *`boolean`* | Enable following bash matching rules more strictly (disallow backslashes as escape characters, and treat single stars as globstars `**`). Default is `false`
 `dot` | *`boolean`* | Whether or not to include dot files when matching. Default is `true`
@@ -85,7 +86,8 @@ Name | Type | Description
 `cmd` | *`string`* | Entrypoint to use for spawned process. Default is `index`
 `args` | *`string[]`* | Arguments to pass to spawned process. Default is `undefined`
 `src` | *`string\|string[]`* | Source paths to watch, supports globs. Default is `**`
-`ignore` | *`string\|string[]`* | Source paths to ignore, supports globs. Default is `(.git\|node_modules)/**`
+`ignore` | *`string\|string[]`* | Source paths to ignore, supports globs. Extends the default ignore list. Default is `undefined`
+`defaultIgnore` | *`boolean`* | Ignore `**/.git/**` and `**/node_modules/**` in addition to `ignore` patterns. Set to `false` to disable. Default is `true`
 `exts` | *`string\|string[]`* | Extensions to include for watching. Default is `undefined`
 `cwd` | *`string`* | Working directory for spawned process. Also used to resolve relative paths for watching. Default is `process.cwd`
 `uid` | *`number`* | User id for spawned process. Default is `undefined`
