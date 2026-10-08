@@ -95,7 +95,9 @@ Name | Type | Description
 `env` | *`object`* | Environment variables to pass to spawned process. Default is `process.env`
 `shell` | *`string\|boolean`* | Which shell to use for spawned process. Used with `spawn` or `exec`. Default is `undefined`
 `killSignal` | *`string`* | Signal to send when stopping the process during restart or kill. Default is `SIGTERM`
-`signals` | *`string\|string[]\|false`* | Process signals that trigger shutdown. The received signal is forwarded to the child process. Set to `false` to handle shutdown yourself. Default is `['SIGINT', 'SIGTERM']`
+`killTimeout` | *`number`* | Time in milliseconds to wait for the process to exit after sending `killSignal` before sending `SIGKILL`. Applies to restart, kill, and close. Disabled when `undefined`. Default is `undefined`
+`signals` | *`string\|string[]\|false`* | Process signals that trigger shutdown. The received signal is forwarded to the child process, and repeat signals while shutting down are forwarded as well, so the child can treat a second as a force quit. Note that in a terminal the child also receives the signal directly from the tty, so its handlers should tolerate signal duplication. Set to `false` to handle shutdown yourself. Default is `['SIGINT', 'SIGTERM']`
+`exitCode` | *`boolean`* | Set `process.exitCode` from the child when the supervisor closes and the child exited with a non-zero code or a signal. Signals map to `128 + signal number`. An existing non-zero `process.exitCode` is kept. Default is `true`
 `stdin` | *`stream`* | Readable stream to pipe to spawned process `stdin`. Not used with `exec`. Default is `undefined`
 `stdout` | *`stream`* | Writable stream to pipe spawned process `stdout` to. With `exec` the output is written when the process closes. Default is `process.stdout`
 `stderr` | *`stream`* | Writable stream to pipe spawned process `stderr` to. With `exec` the output is written when the process closes. Default is `process.stderr`
@@ -112,8 +114,8 @@ Name | Description
 `spawn()` | Spawn process based on options, if not already spawned. Returns `undefined`
 `start()` | Spawn process and return promise that resolves when the supervisor has exited. Returns `promise<undefined>`
 `restart()` | Kill existing process then re-spawn. Returns `promise<undefined>`
-`close()` | Kill existing process, abort watchers, and close supervisor. Emits a `done` event when shutdown complete. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
-`kill({ signal, exit })` | Kill existing process with `signal`, defaults to `killSignal`. Optionally abort watchers, remove signal handlers, and close supervisor. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
+`close()` | Kill existing process, abort watchers, and close supervisor. Emits a `done` event when shutdown complete. Signal handlers are removed once the process has closed. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
+`kill({ signal, exit })` | Kill existing process with `signal`, defaults to `killSignal`. Optionally abort watchers and close supervisor if `exit` is `true`. Calling with `exit` again while already closing forwards `signal` to the process and returns the same promise. Returns a `promise` that resolves with `undefined` or rejects with an `error` if there was an error while terminating the process
 `trigger(paths, event)` | Trigger a change event and restart. Returns `undefined`
 
 #### Events
@@ -124,7 +126,7 @@ Name | Arguments | Description
 `close` | `proc, code, signal` | Emitted when the process has fully exited and stdio is closed
 `error` | `err, proc, code, signal` | Emitted when the process exits on its own with a non-zero code or signal, or when spawning fails. Exits caused by `restart`, `kill`, or `close` are expected and do not emit
 `change` | `paths, event` | Emitted when a watched path changes, before restarting
-`done` | | Emitted when the supervisor has shut down
+`done` | `code, signal` | Emitted when the supervisor has shut down. `code` and `signal` are from the final process exit, both `undefined` if no process was running
 
 ## Examples
 ### Watcher
