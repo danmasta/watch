@@ -28,18 +28,36 @@ describe('Watchmon', () => {
         writeFileSync(join(dir, 'index.js'), `setInterval(() => {}, 1000);`);
         writeFileSync(join(dir, 'argv.js'), `process.stdout.write(JSON.stringify(process.execArgv));`);
         writeFileSync(join(dir, 'fail.js'), `process.exit(3);`);
+        // Note: Exits with 3 on the second SIGINT, ignores the first
+        writeFileSync(join(dir, 'signals.js'), `let n = 0; process.on('SIGINT', () => { if (++n === 2) process.exit(3); }); setInterval(() => {}, 1000); process.stdout.write('ready');`);
+        writeFileSync(join(dir, 'hang.js'), `process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); process.stdout.write('ready');`);
         sink = capture();
     });
 
     afterEach(async () => {
         await mon?.close();
         mon = undefined;
+        process.exitCode = undefined;
         rmSync(dir, { recursive: true, force: true });
     });
 
     function create (opts) {
-        mon = new Watchmon({ cwd: dir, watch: false, signals: false, stdout: sink, stderr: sink, ...opts });
+        mon = new Watchmon({ cwd: dir, watch: false, signals: false, exitCode: false, stdout: sink, stderr: sink, ...opts });
         return mon;
+    }
+
+    // Resolve once the child has written ready to stdout
+    function ready () {
+        return new Promise(resolve => {
+            let check = () => {
+                if (sink.data.includes('ready')) {
+                    sink.off('data', check);
+                    resolve();
+                }
+            };
+            sink.on('data', check);
+            check();
+        });
     }
 
     it('should not emit error on restart', async () => {
@@ -164,6 +182,77 @@ describe('Watchmon', () => {
         await once(mon, 'spawn');
         await mon.close();
         expect(process.listenerCount('SIGINT')).to.equal(before);
+    });
+
+    it('should keep signal handlers until the child closes and forward repeats', async () => {
+        let before = process.listenerCount('SIGINT');
+        create({ cmd: 'signals', signals: ['SIGINT'] });
+        await ready();
+        let done = once(mon, 'done');
+        process.emit('SIGINT');
+        await wait(DEBOUNCE);
+        expect(mon.running).to.equal(true);
+        expect(process.listenerCount('SIGINT')).to.equal(before + 1);
+        process.emit('SIGINT');
+        let [code, signal] = await done;
+        expect(code).to.equal(3);
+        expect(signal).to.equal(null);
+        expect(mon.running).to.equal(false);
+        expect(process.listenerCount('SIGINT')).to.equal(before);
+        expect(process.exitCode).to.equal(undefined);
+    });
+
+    it('should return the same promise while closing', async () => {
+        create();
+        await once(mon, 'spawn');
+        let first = mon.kill({ exit: true });
+        let second = mon.kill({ exit: true });
+        expect(second).to.equal(first);
+        await first;
+        expect(mon.closing).to.equal(null);
+    });
+
+    it('should not respawn after close has started', async () => {
+        create();
+        await once(mon, 'spawn');
+        let closing = mon.close();
+        await mon.restart();
+        await closing;
+        expect(mon.running).to.equal(false);
+    });
+
+    it('should escalate to SIGKILL after killTimeout', async () => {
+        create({ cmd: 'hang', killTimeout: DEBOUNCE });
+        await ready();
+        let close = once(mon, 'close');
+        await mon.kill();
+        expect((await close)[2]).to.equal('SIGKILL');
+    });
+
+    it('should set process.exitCode from the child exit code', async () => {
+        create({ cmd: 'signals', signals: ['SIGINT'], exitCode: true });
+        await ready();
+        let done = once(mon, 'done');
+        process.emit('SIGINT');
+        process.emit('SIGINT');
+        await done;
+        expect(process.exitCode).to.equal(3);
+    });
+
+    it('should set process.exitCode from the child signal', async () => {
+        create({ cmd: 'hang', killTimeout: DEBOUNCE, exitCode: true });
+        await ready();
+        await mon.close();
+        expect(process.exitCode).to.equal(137);
+    });
+
+    it('should not set process.exitCode on a clean exit', async () => {
+        create({ cmd: 'index', killSignal: 'SIGKILL', exitCode: true });
+        await once(mon, 'spawn');
+        await mon.kill();
+        expect(process.exitCode).to.equal(undefined);
+        await mon.close();
+        expect(process.exitCode).to.equal(undefined);
     });
 
     it('should not register signal handlers when signals is false', () => {
