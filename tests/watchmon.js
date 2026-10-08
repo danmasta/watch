@@ -234,6 +234,8 @@ describe('Watchmon', () => {
         await ready();
         let done = once(mon, 'done');
         process.emit('SIGINT');
+        // Note: Signals sent back to back can coalesce in the kernel, the child would only see one
+        await wait(DEBOUNCE);
         process.emit('SIGINT');
         await done;
         expect(process.exitCode).to.equal(3);
